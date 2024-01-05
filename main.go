@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"strings"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -56,10 +58,10 @@ func main() {
 func getNotes(c *gin.Context) {
 	var notes []Note
 	if err := db.Find(&notes).Error; err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, notes)
+	c.JSON(http.StatusOK, notes)
 }
 
 // getNote handles the request to retrieve a specific item by ID
@@ -67,24 +69,32 @@ func getNote(c *gin.Context) {
 	var item Note
 	id := c.Param("id")
 	if err := db.First(&item, id).Error; err != nil {
-		c.JSON(404, gin.H{"error": "Note not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
 		return
 	}
-	c.JSON(200, item)
+	c.JSON(http.StatusOK, item)
 }
 
 // createNote handles the request to create a new item
 func createNote(c *gin.Context) {
 	var item Note
 	if err := c.ShouldBindJSON(&item); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	item.Name = strings.TrimSpace(item.Name)
+
+	if item.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Name cannot be blank"})
+		return
+	}
+
 	if err := db.Create(&item).Error; err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(201, item)
+	c.JSON(http.StatusCreated, item)
 }
 
 // updateNote handles the request to update an existing item by ID
@@ -92,15 +102,15 @@ func updateNote(c *gin.Context) {
 	var item Note
 	id := c.Param("id")
 	if err := db.First(&item, id).Error; err != nil {
-		c.JSON(404, gin.H{"error": "Note not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
 		return
 	}
 	if err := c.ShouldBindJSON(&item); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	db.Save(&item)
-	c.JSON(200, item)
+	c.JSON(http.StatusOK, item)
 }
 
 // deleteNote handles the request to delete an item by ID
@@ -108,8 +118,8 @@ func deleteNote(c *gin.Context) {
 	var item Note
 	id := c.Param("id")
 	if err := db.Delete(&item, id).Error; err != nil {
-		c.JSON(404, gin.H{"error": "Note not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
 		return
 	}
-	c.JSON(200, gin.H{"message": "Note deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Note deleted successfully"})
 }
