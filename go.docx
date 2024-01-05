@@ -1,0 +1,9 @@
+Initial go mod
+> go mod edit --module=example.com/mod
+
+
+Set up
+
+> go get -u gorm.io/driver/sqlite
+> go get -u github.com/gin-gonic/gin
+> go get -u gorm.io/gorm
